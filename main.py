@@ -36,6 +36,22 @@ rfm['M'] = pd.qcut(rfm['AVG_SUM'],
                               q=3,
                               labels=[1,2,3],duplicates = 'drop')
 rfm["RFM"] = rfm["R"].astype ( str ) + rfm["F"].astype ( str ) + rfm["M"].astype ( str )
+p_rfm = pd.DataFrame()
+p_rfm['Частота'] = rfm['frequency']
+p_rfm['Средний_чек'] = rfm['AVG_SUM']
+p_rfm['Статус'] = ['Потерянный' if x =='111' or x =='112' or x =='113'
+                   else 'Уходящие' if x =='121' or x =='122' or x =='123'
+                   else 'Уходящие лояльные' if x =='131' or x =='132' or x =='133'
+else 'Спящие' if x =='211' or x =='212' or x =='213' or x =='221' or x =='222' or x =='223'
+else 'Спящие лояльные' if x =='231' or x =='232' or x =='233'
+else 'Новички' if x =='311' or x =='312'
+else 'Лояльные новички' if x =='313' or x =='321' or x =='322'
+else 'Постоянные со средним чеком' if x =='323'
+else 'Постоянные лояльные с маленьким чеком' if x =='331'
+else 'Постоянные лояльные с средним чеком' if x =='332'
+                   else 'VIP' for x in rfm['RFM']]
+p_rfm.to_csv('pavel_rfm.csv')
+print(p_rfm)
 sg.theme('DarkAmber')   # Add a touch of color
 # All the stuff inside your window.
 
