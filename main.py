@@ -7,12 +7,21 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 import csv
+import webbrowser
+from functools import partial
+import pathlib
+from pathlib import Path
+from pandastable import Table, TableModel
 import numpy as np
+from cProfile import label
+from cgitb import text
 from datetime import datetime
 from datetime import date
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
+import seaborn as sns
+from scipy.stats import gaussian_kde
 n = 100
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -35,9 +44,9 @@ class App(customtkinter.CTk):
         img = Image.open(x)
         img = img.resize((800, 600), Image.LANCZOS)
         img = ImageTk.PhotoImage(img)
-        panel = Label(self, image=img)
-        panel.image = img
-        panel.grid(row=0, column=1, padx=20)
+        self.panel = Label(self, image=img)
+        self.panel.image = img
+        self.panel.grid(row=2, column=1, padx=100)
 
         # create sidebar frame with widgets
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
@@ -45,8 +54,11 @@ class App(customtkinter.CTk):
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
         self.sidebar_button_1 =  customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Dark", "Light", "System"],                                                                      command=self.change_appearance_mode_event)
         self.sidebar_button_1.grid(row=1, column=1, padx=20, pady=30)
+        self.sidebar_button_2 = customtkinter.CTkButton(self.sidebar_frame, text="DataLens by Pahsha",
+                                                        command=self.callback)
+        self.sidebar_button_2.grid(row=2, column=1, pady=30)
         self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame,text="Настройки", command=self.createSitingWindow)
-        self.sidebar_button_3.grid(row=2, column=1)
+        self.sidebar_button_3.grid(row=3, column=1)
 
         # create main entry and button
         self.entry = customtkinter.CTkEntry(self, placeholder_text="Выберите рабочий DataSet", state='disabled')
@@ -55,17 +67,59 @@ class App(customtkinter.CTk):
         self.main_button_1.grid(row=3, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
         # create radiobutton frame
-        self.radiobutton_frame = customtkinter.CTkFrame(self)
-        self.radiobutton_frame.grid(row=0, column=3, padx=(20, 20), pady=(20, 0), sticky="nsew")
-        self.radio_var = tkinter.IntVar(value=0)
-        self.label_radio_group = customtkinter.CTkLabel(master=self.radiobutton_frame, text="Виды графиков", text_color=("gray10", "#DCE4EE"))
-        self.label_radio_group.grid(row=0, column=2, columnspan=1, padx=10, pady=10, sticky="")
-        self.radio_button_1 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, text='Круговая диаграмма', variable=self.radio_var,command=self.graf1, value=0)
-        self.radio_button_1.grid(row=1, column=2, pady=10, padx=20, sticky="nsew")
-        self.radio_button_2 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, text='Ломанный график',variable=self.radio_var, command=self.graf2, value=1)
-        self.radio_button_2.grid(row=2, column=2, pady=10, padx=20, sticky="nsew")
-        self.radio_button_3 = customtkinter.CTkRadioButton(master=self.radiobutton_frame, text='Плитка',variable=self.radio_var,command=self.graf3, value=2)
-        self.radio_button_3.grid(row=3, column=2, pady=10, padx=20, sticky="nsew")
+        global languages
+        languages = ['Загрузите датасет']
+        self.combobox = customtkinter.CTkComboBox(master=self, state="readonly",
+                                                    values=languages,height=70)
+        self.combobox.grid(row=0, column=3, pady=10, padx=50, sticky="nsew")
+        self.combobox1 = customtkinter.CTkComboBox(master=self, state="readonly",
+                                                    values=languages,height=70)
+        self.combobox1.grid(row=1, column=3, pady=10, padx=50, sticky="nsew")
+
+    def graf(self):
+        img = Image.open('1.png')
+        img = img.resize((800, 600), Image.LANCZOS)
+        img = ImageTk.PhotoImage(img)
+        panel = Label(self, image=img)
+        panel.image = img
+        panel.grid(row=2, column=1, padx=20)
+    def grow(self,p_rfm,df):
+        plt.close('all')
+        years = ['2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023']
+        x_data = []
+        df['rep_date'] = pd.to_datetime(df['rep_date']).dt.year
+        data_grp = df.groupby('rep_date').size()
+        elements_count = len(data_grp)
+        for i in range(elements_count):
+            x_data.append(years[i])
+        if self.combobox1.get() == 'График распределения':
+            sns.distplot(p_rfm[self.combobox.get()], hist=True, kde=True,
+                     bins=int(180 / 5), color='darkblue',
+                     hist_kws={'edgecolor': 'black'},
+                     kde_kws={'linewidth': 4})
+            plt.savefig('1.png', bbox_inches='tight')
+        if self.combobox1.get() == 'Круговая диаграмма':
+            cat_totals = p_rfm.groupby("Статус").size()
+            cat_totals.plot(kind="pie", label="", labeldistance=1.05, autopct='%1.1f%%', radius=1.2, pctdistance=0.75,
+                            shadow=1)
+            plt.savefig('1.png', bbox_inches='tight')
+        if self.combobox1.get() == 'Годовой график':
+            _, ax = plt.subplots()
+            x_label = "Год"
+            y_label = "Кол-во клиентов"
+            title = "Распределение клиентов по годам"
+            y_data = data_grp
+            ax.plot(x_data, y_data, marker='*', lw=2, color='#539caf', alpha=1)
+            plt.locator_params(axis='both', integer=True, tight=True)
+            ax.set_title(title)
+            ax.set_xlabel(x_label)
+            ax.set_ylabel(y_label)
+            plt.savefig('1.png', bbox_inches='tight')
+        if self.combobox1.get() == 'График зависимости':
+            plt.hist(p_rfm[self.combobox.get()], color='royalblue', edgecolor='black', bins=100)
+            plt.savefig('1.png', bbox_inches='tight')
+        self.graf()
+
 
     def open_input_dialog_event(self):
         dialog = customtkinter.CTkInputDialog(text="Type in a number:", title="CTkInputDialog")
@@ -73,36 +127,6 @@ class App(customtkinter.CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
-
-    def sidebar_button_event(self):
-        print("sidebar_button click")
-
-    def graf1(self):
-        x = '1.png'
-        img = Image.open(x)
-        img = img.resize((800, 600), Image.LANCZOS)
-        img = ImageTk.PhotoImage(img)
-        panel = Label(self, image=img)
-        panel.image = img
-        panel.grid(row=0, column=1, padx=20)
-
-    def graf2(self):
-        x = '2.png'
-        img = Image.open(x)
-        img = img.resize((800, 600), Image.LANCZOS)
-        img = ImageTk.PhotoImage(img)
-        panel = Label(self, image=img)
-        panel.image = img
-        panel.grid(row=0, column=1, padx=20)
-
-    def graf3(self):
-        x = '3.png'
-        img = Image.open(x)
-        img = img.resize((800, 600), Image.LANCZOS)
-        img = ImageTk.PhotoImage(img)
-        panel = Label(self, image=img)
-        panel.image = img
-        panel.grid(row=0, column=1, padx=20)
 
     def createSitingWindow(root):
         root = Tk()
@@ -122,12 +146,45 @@ class App(customtkinter.CTk):
         root.entry = customtkinter.CTkEntry(master=root.radiobutton_frame, placeholder_text=n)
         root.entry.grid(row=0, column=2)
         n = root.placeholder_text
+    def update(self,languages):
+        kinds = ['График распределения', 'Круговая диаграмма','Годовой график','График зависимости']
+        self.combobox = customtkinter.CTkComboBox(master=self, state="readonly",
+                                                  values=languages, height=70)
+        self.combobox.grid(row=0, column=3, pady=10, padx=20, sticky="nsew")
+        self.combobox1 = customtkinter.CTkComboBox(master=self, state="readonly",
+                                                   values=kinds, height=70)
+        self.combobox1.grid(row=1, column=3, pady=10, padx=20, sticky="nsew")
+
+    def callback(self):
+        webbrowser.open_new(r"https://vk.com/away.php?to=https://datalens.yandex/we7i55b9jt84m?state=6b84af67547")
     def Simpletoggle(root):
 
         if root.toggle_button.config('text')[-1] == 'ON':
             root.toggle_button.config(text='OFF')
         else:
             root.toggle_button.config(text='ON')
+    def RFM(root,p_rfm):
+        root = Tk()
+        root.title("Созданный файл RFM-анализа")
+        root.geometry(f"{900}x{600}")
+        root.configure(background='black')
+        root.iconbitmap('iccco.ico')
+        root.grid_columnconfigure(1, weight=1)
+        l1 = list(p_rfm)  # List of column names as headers
+        r_set = p_rfm.to_numpy().tolist()  # Create list of list using rows
+        trv = ttk.Treeview(root, selectmode='browse')
+        trv.grid(row=1, column=1, padx=30, pady=20)
+        trv["columns"] = l1
+        # Defining headings, other option in tree
+        # width of columns and alignment
+        for i in l1:
+            trv.column(i, width=100, anchor='c')
+            # Headings of respective columns
+            trv.heading(i, text=i)
+        for dt in r_set[:100]:
+            v = [r for r in dt]  # creating a list from each row
+            trv.insert(parent='', index='end', text='', values=v)  # adding row
+        trv.pack(expand=tk.YES, fill=tk.BOTH)
     def createNewWindow(root):
         root = Tk()
         root.title("Обзор выбранного файла")
@@ -149,7 +206,6 @@ class App(customtkinter.CTk):
                        values=(columns[i]))
 
         my_game.pack(expand=tk.YES, fill=tk.BOTH)
-        root.mainloop()
 
     def getLocalFile(self):
         root = tk.Tk()
@@ -172,14 +228,13 @@ class App(customtkinter.CTk):
                 columns.append(row)
         df = pd.read_csv(filePath)
         df.head()
-        df['rep_date'] = df['rep_date'].apply(
-            lambda x: datetime.strptime(x, '%m/%d/%Y'))
+        df['rep_date'] = pd.to_datetime(df['rep_date'], format='%Y-%m-%d')
         df["date_today"] = date.today()
         df['date_today'] = pd.to_datetime(df['date_today'], format='%Y/%m/%d')
         df["Recency"] = \
             (df["date_today"] - df["rep_date"]).dt.days
-        df = df.sort_values(by='partner ', ascending=True)
-        rfm = (df.pivot_table(index="partner ",
+        df = df.sort_values(by='partner', ascending=True)
+        rfm = (df.pivot_table(index="partner",
                               values=["monetary", "Recency"],
                               aggfunc={"Recency": np.min, "monetary": [np.sum, len]},
                               fill_value=0))
@@ -196,8 +251,10 @@ class App(customtkinter.CTk):
                            labels=[1, 2, 3], duplicates='drop')
         rfm["RFM"] = rfm["R"].astype(str) + rfm["F"].astype(str) + rfm["M"].astype(str)
         p_rfm = pd.DataFrame()
+        p_rfm['Новизна'] = rfm['recency']
         p_rfm['Частота'] = rfm['frequency']
-        p_rfm['Средний_чек'] = rfm['AVG_SUM']
+        p_rfm['RFM'] = rfm['RFM']
+        p_rfm['Ср.чек'] = rfm['AVG_SUM']
         p_rfm['Статус'] = ['Потерянный' if x == '111' or x == '112' or x == '113'
                            else 'Уходящие' if x == '121' or x == '122' or x == '123'
         else 'Уходящие лояльные' if x == '131' or x == '132' or x == '133'
@@ -209,48 +266,12 @@ class App(customtkinter.CTk):
         else 'Постоянные лояльные с маленьким чеком' if x == '331'
         else 'Постоянные лояльные с средним чеком' if x == '332'
         else 'VIP' for x in rfm['RFM']]
-        cat_totals = p_rfm.groupby("Статус").size()
-        figure(figsize=(12, 8), dpi=100)
-        cat_totals.plot(kind="pie", label="", labeldistance=1.05, autopct='%1.1f%%', radius=1, pctdistance=0.75,
-                        shadow=1)
-        plt.savefig('1.png', bbox_inches='tight')
-        months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
-                  'November', 'December']
-        x_data = []
-
-        def lineplot(x_data, y_data, x_label="Месяц", y_label="Кол-во клиентов по месяцам",
-                     title="Распределение клиентов по месяцам"):
-            # Create the plot object
-            _, ax = plt.subplots()
-
-            # Plot the best fit line, set the linewidth (lw), color and
-            # transparency (alpha) of the line
-            ax.plot(x_data, y_data, marker='*', lw=2, color='#539caf', alpha=1)
-            plt.locator_params(axis='both', integer=True, tight=True)
-
-            # Label the axes and provide a title
-            ax.set_title(title)
-            ax.set_xlabel(x_label)
-            ax.set_ylabel(y_label)
-            plt.savefig('2.png', bbox_inches='tight')
-
-        def data_po_month():
-            df = pd.read_csv(filePath)
-            df.head()
-            df['rep_date'] = df['rep_date'].apply(
-                lambda x: datetime.strptime(x, '%m/%d/%Y'))
-            df['rep_date'] = pd.to_datetime(df['rep_date']).dt.month
-            data_grp = df.groupby('rep_date').size()
-            elements_count = len(data_grp)
-            for i in range(elements_count):
-                x_data.append(months[i])
-            lineplot(x_data, data_grp)
-
-        data_po_month()
-        self.createNewWindow()
-        return filePath
-
+        self.update(list(p_rfm.columns.values))
+        self.sidebar_button_rfm = customtkinter.CTkButton(self.sidebar_frame, text='RFM',
+                                                          command=partial(self.RFM, p_rfm), fg_color='grey')
+        self.sidebar_button_rfm.grid(row=5, column=1, pady=20)
+        self.main_button_2 = customtkinter.CTkButton(master=self,text='Построить график',command=partial(self.grow, p_rfm,df), fg_color="transparent", border_width=2, text_color=("gray10", "#DCE4EE"))
+        self.main_button_2.grid(row=2, column=3, pady=0, padx=0)
 if __name__ == "__main__":
-
     app = App()
     app.mainloop()
