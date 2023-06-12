@@ -9,25 +9,19 @@ from tkinter import ttk
 import csv
 import webbrowser
 from functools import partial
-import pathlib
-from pathlib import Path
-from pandastable import Table, TableModel
 import numpy as np
-from cProfile import label
-from cgitb import text
-from datetime import datetime
 from datetime import date
 import pandas as pd
+from idlelib.tooltip import Hovertip
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
 import seaborn as sns
-from scipy.stats import gaussian_kde
 n = 100
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 class App(customtkinter.CTk):
     def __init__(self):
+        #Задаем интерфейс основной страницы
         super().__init__()
         self.iconbitmap('iccco.ico')
 
@@ -42,11 +36,11 @@ class App(customtkinter.CTk):
 
         x = '0.png'
         img = Image.open(x)
-        img = img.resize((800, 600), Image.LANCZOS)
+        img = img.resize((600, 500), Image.LANCZOS)
         img = ImageTk.PhotoImage(img)
         self.panel = Label(self, image=img)
         self.panel.image = img
-        self.panel.grid(row=2, column=1, padx=100)
+        self.panel.grid(row=2, column=1, padx=0)
 
         # create sidebar frame with widgets
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
@@ -75,50 +69,68 @@ class App(customtkinter.CTk):
         self.combobox1 = customtkinter.CTkComboBox(master=self, state="readonly",
                                                     values=languages,height=70)
         self.combobox1.grid(row=1, column=3, pady=10, padx=50, sticky="nsew")
-
-    def graf(self):
+#Вывод графиков на экран
+    def graf(self,text):
         img = Image.open('1.png')
-        img = img.resize((800, 600), Image.LANCZOS)
+        img = img.resize((600, 500), Image.LANCZOS)
         img = ImageTk.PhotoImage(img)
         panel = Label(self, image=img)
         panel.image = img
         panel.grid(row=2, column=1, padx=20)
+        self.myTip = Hovertip(panel, text)
+#Построение и сохранения графика
     def grow(self,p_rfm,df):
         plt.close('all')
-        years = ['2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023']
-        x_data = []
-        df['rep_date'] = pd.to_datetime(df['rep_date']).dt.year
-        data_grp = df.groupby('rep_date').size()
-        elements_count = len(data_grp)
-        for i in range(elements_count):
-            x_data.append(years[i])
-        if self.combobox1.get() == 'График распределения':
-            sns.distplot(p_rfm[self.combobox.get()], hist=True, kde=True,
-                     bins=int(180 / 5), color='darkblue',
-                     hist_kws={'edgecolor': 'black'},
-                     kde_kws={'linewidth': 4})
-            plt.savefig('1.png', bbox_inches='tight')
-        if self.combobox1.get() == 'Круговая диаграмма':
-            cat_totals = p_rfm.groupby("Статус").size()
-            cat_totals.plot(kind="pie", label="", labeldistance=1.05, autopct='%1.1f%%', radius=1.2, pctdistance=0.75,
-                            shadow=1)
-            plt.savefig('1.png', bbox_inches='tight')
-        if self.combobox1.get() == 'Годовой график':
-            _, ax = plt.subplots()
-            x_label = "Год"
-            y_label = "Кол-во клиентов"
-            title = "Распределение клиентов по годам"
-            y_data = data_grp
-            ax.plot(x_data, y_data, marker='*', lw=2, color='#539caf', alpha=1)
-            plt.locator_params(axis='both', integer=True, tight=True)
-            ax.set_title(title)
-            ax.set_xlabel(x_label)
-            ax.set_ylabel(y_label)
-            plt.savefig('1.png', bbox_inches='tight')
-        if self.combobox1.get() == 'График зависимости':
-            plt.hist(p_rfm[self.combobox.get()], color='royalblue', edgecolor='black', bins=100)
-            plt.savefig('1.png', bbox_inches='tight')
-        self.graf()
+        try:
+            if self.combobox1.get() == 'График распределения':
+                sns.distplot(p_rfm[self.combobox.get()], hist=True, kde=True,
+                         bins=int(180 / 5), color='darkblue',
+                         hist_kws={'edgecolor': 'black'},
+                         kde_kws={'linewidth': 4})
+                plt.savefig('1.png', bbox_inches='tight')
+                text ='График распределения - представление данных, которое отображает, как часто появляются различные значения в наборе данных.'
+            if self.combobox1.get() == 'Круговая диаграмма':
+                cat_totals = p_rfm.groupby(self.combobox.get()).size()
+                cat_totals.plot(kind="pie", label="", labeldistance=1.05, autopct='%1.1f%%', radius=2, pctdistance=0.8,
+                                shadow=0)
+                plt.savefig('1.png', bbox_inches='tight')
+                text='Круговая диаграмма -представление данных, которое отображает процентное соотношение различных категорий в наборе данных'
+            if self.combobox1.get() == 'Годовой график':
+                years = ['2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023']
+                x_data = []
+                del x_data[:]
+                df['rep_date'] = pd.to_datetime(df['rep_date']).dt.year
+                data_grp = df.groupby('rep_date').size()
+                elements_count = len(data_grp)
+                for i in range(elements_count):
+                    x_data.append(years[i])
+                def lineplot(x_data, y_data, x_label="Год", y_label="Кол-во клиентов",
+                             title="Распределение клиентов по годам"):
+                    _, ax = plt.subplots()
+
+                    ax.plot(x_data, y_data, marker='*', lw=2, color='#539caf', alpha=1)
+
+                    ax.set_title(title)
+                    ax.set_xlabel(x_label)
+                    ax.set_ylabel(y_label)
+                    plt.savefig('1.png', bbox_inches='tight')
+
+                lineplot(x_data, data_grp)
+                text='Годовой график - представление данных, которое отображает зависимость определенных параметров за определенный год'
+
+            if self.combobox1.get() == 'График зависимости':
+                plt.hist(p_rfm[self.combobox.get()], color='royalblue', edgecolor='black', bins=100)
+                plt.savefig('1.png', bbox_inches='tight')
+                text='График зависимости - графическое представление взаимосвязи между двумя или несколькими переменными'
+
+            self.graf(text)
+        except:
+            img = Image.open('error.png')
+            img = img.resize((600, 500), Image.LANCZOS)
+            img = ImageTk.PhotoImage(img)
+            panel = Label(self, image=img)
+            panel.image = img
+            panel.grid(row=2, column=1, padx=20)
 
 
     def open_input_dialog_event(self):
@@ -127,7 +139,7 @@ class App(customtkinter.CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
-
+#Создание окна настроек
     def createSitingWindow(root):
         root = Tk()
         root.title("Настройки")
@@ -146,6 +158,7 @@ class App(customtkinter.CTk):
         root.entry = customtkinter.CTkEntry(master=root.radiobutton_frame, placeholder_text=n)
         root.entry.grid(row=0, column=2)
         n = root.placeholder_text
+#Задаем хранимые списки
     def update(self,languages):
         kinds = ['График распределения', 'Круговая диаграмма','Годовой график','График зависимости']
         self.combobox = customtkinter.CTkComboBox(master=self, state="readonly",
@@ -154,15 +167,17 @@ class App(customtkinter.CTk):
         self.combobox1 = customtkinter.CTkComboBox(master=self, state="readonly",
                                                    values=kinds, height=70)
         self.combobox1.grid(row=1, column=3, pady=10, padx=20, sticky="nsew")
-
+#Открытие сайта с графиками
     def callback(self):
-        webbrowser.open_new(r"https://vk.com/away.php?to=https://datalens.yandex/we7i55b9jt84m?state=6b84af67547")
+        webbrowser.open_new(r"https://datalens.yandex/axo9cssagz340")
     def Simpletoggle(root):
 
         if root.toggle_button.config('text')[-1] == 'ON':
             root.toggle_button.config(text='OFF')
         else:
             root.toggle_button.config(text='ON')
+
+    # Создание окна просмотра нового датасета
     def RFM(root,p_rfm):
         root = Tk()
         root.title("Созданный файл RFM-анализа")
@@ -185,6 +200,8 @@ class App(customtkinter.CTk):
             v = [r for r in dt]  # creating a list from each row
             trv.insert(parent='', index='end', text='', values=v)  # adding row
         trv.pack(expand=tk.YES, fill=tk.BOTH)
+
+    # Создание окна просмотра датасета
     def createNewWindow(root):
         root = Tk()
         root.title("Обзор выбранного файла")
@@ -207,6 +224,7 @@ class App(customtkinter.CTk):
 
         my_game.pack(expand=tk.YES, fill=tk.BOTH)
 
+    # Получаем,открываем,обрабатываем датасет
     def getLocalFile(self):
         root = tk.Tk()
         root.withdraw()
@@ -242,10 +260,15 @@ class App(customtkinter.CTk):
         rfm.columns = ['recency', 'frequency', 'monetary', 'AVG_SUM']
         rfm['R'] = pd.qcut(rfm['recency'],
                            q=3,
-                           labels=[3, 2, 1])
-        rfm['F'] = pd.qcut(rfm['frequency'],
-                           q=4,
-                           labels=[1, 2, 3], duplicates='drop')
+                           labels=[3, 2, 1], duplicates='drop')
+        try:
+            rfm['F'] = pd.qcut(rfm['frequency'],
+                               q=4,
+                               labels=[1, 2, 3], duplicates='drop')
+        except:
+            rfm['F'] = pd.qcut(rfm['frequency'],
+                               q=3,
+                               labels=[1, 2, 3], duplicates='drop')
         rfm['M'] = pd.qcut(rfm['AVG_SUM'],
                            q=3,
                            labels=[1, 2, 3], duplicates='drop')
