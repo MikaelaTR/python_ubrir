@@ -4,4 +4,14 @@
 ![image](https://github.com/MikaelaTR/python_ubrir/assets/114156441/cc08cdbc-bfb1-4cb9-a8d1-cf9db0953685)
 ![image](https://github.com/MikaelaTR/python_ubrir/assets/114156441/f04e80ef-5306-4977-9b90-ee9cc3609240)
 ![image](https://github.com/MikaelaTR/python_ubrir/blob/main/6.jpg)
-
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/7.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/8.jpg)
+Собщение об ошибке
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/9.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/10.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/11.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/12.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/13.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/14.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/15.jpg)
+![image](https://github.com/MikaelaTR/python_ubrir/blob/main/16.jpg)
